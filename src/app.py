@@ -3,6 +3,8 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
+from exceptions.api_error import APIError
+
 class API:
     def __init__(self):
         self.app = FastAPI()
@@ -13,7 +15,7 @@ class API:
     def _register_routes(self):
         @self.app.post("/query")
         async def query():
-            raise ValueError("Some error")
+            raise APIError("Some error")
 
     def _register_exception_handlers(self):
         @self.app.exception_handler(HTTPException)
@@ -23,8 +25,8 @@ class API:
                 content={"message": f"Error: {exc.detail}"},
             )
 
-        @self.app.exception_handler(Exception)
-        async def general_exception_handler(request: Request, exc: Exception):
+        @self.app.exception_handler(APIError)
+        async def general_exception_handler(request: Request, exc: APIError):
             return JSONResponse(
                 status_code=500,
                 content={"error": f"Internal Server Error: {str(exc)}"},
