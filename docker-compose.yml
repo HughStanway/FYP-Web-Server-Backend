@@ -1,0 +1,14 @@
+services:
+  fastapi:
+    build: .
+    ports:
+      - "8000:8000"
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "80:80"
+    depends_on:
+      - fastapi
