@@ -32,13 +32,7 @@ make down
 
 ## Developing
 
-After making changes to the API code (src/) reload the containers to apply new changes with:
-
-```[makefile]
-make reload
-```
-
-If the dependencies change you must instead run:
+After making changes to the API code (src/) or to dependencies reload the containers to apply new changes with:
 
 ```[makefile]
 make rebuild

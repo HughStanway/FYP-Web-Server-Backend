@@ -8,11 +8,7 @@ build:
 	docker compose down --volumes --remove-orphans
 	docker compose up --build -d
 
-# Rebuild only if FastAPI code changes (without rebuilding dependencies)
-reload:
-	docker compose restart fastapi
-
-# Rebuild if dependencies or Dockerfile change
+# Rebuild after making changes
 rebuild:
 	docker compose down && docker compose up --build -d
 
