@@ -18,6 +18,12 @@ To temporarily stop the server, run:
 make stop
 ```
 
+To restart the server without stopping, run:
+
+```[makefile]
+make restart
+```
+
 To stop and remove everything (containers, networks, and volumes), run:
 
 ```[makefile]
@@ -36,4 +42,10 @@ If the dependencies change you must instead run:
 
 ```[makefile]
 make rebuild
+```
+
+Print server logs:
+
+```[makefile]
+make logs
 ```
