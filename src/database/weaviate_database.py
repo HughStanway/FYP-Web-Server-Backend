@@ -1,4 +1,5 @@
 import os
+import logging
 
 import weaviate
 import weaviate.classes as wvc
@@ -6,6 +7,11 @@ from database_exception import DatabaseException
 from interface import DatabaseInterface
 from weaviate.classes.init import AdditionalConfig, Timeout
 
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(levelname)s:     [LOGGING]: %(message)s'
+)
 
 class Weaviate(DatabaseInterface):
     """
@@ -43,7 +49,7 @@ class Weaviate(DatabaseInterface):
                 )
 
             self._initialized = True
-            print("Weaviate client and collection initialised")
+            logging.info("Weaviate client and collection initialised")
 
         except Exception as e:
             raise DatabaseException(

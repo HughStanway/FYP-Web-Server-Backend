@@ -4,6 +4,10 @@ import os
 import voyageai
 from interface import EmbeddingInterface
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(levelname)s:     [LOGGING]: %(message)s'
+)
 
 class VoyageEmbedding(EmbeddingInterface):
     MODEL = "voyage-code-3"
@@ -19,7 +23,7 @@ class VoyageEmbedding(EmbeddingInterface):
         try:
             self.voyage_client = voyageai.Client()
             self._initialized = True
-            print("Connection to voyage API successfull")
+            logging.info("Connection to voyage API successfull")
         except voyageai.error.VoyageError as e:
             raise voyageai.error.APIError(f"Error during embedding setup: {e}")
 

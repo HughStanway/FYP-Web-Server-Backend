@@ -5,16 +5,18 @@ from exceptions.api_error import APIError
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(levelname)s:     [LOGGING]: %(message)s'
+)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     api_instance = app.state.api_instance
-    logging.info("[-] Init Application Startup")
+    logging.info("Init Application Startup")
     api_instance.startup()
     yield
-    logging.info("[-] Init Application Shutdown")
+    logging.info("Init Application Shutdown")
     api_instance.shutdown()
 
 class API:
