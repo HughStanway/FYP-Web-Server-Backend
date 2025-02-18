@@ -6,9 +6,9 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(levelname)s:     [LOGGING]: %(message)s'
+    level=logging.DEBUG, format="%(levelname)s:     [LOGGING]: %(message)s"
 )
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,13 +19,14 @@ async def lifespan(app: FastAPI):
     logging.info("Init Application Shutdown")
     api_instance.shutdown()
 
+
 class API:
     def __init__(self):
         self.app = FastAPI(lifespan=lifespan)
         self.app.state.api_instance = self
         self._register_routes()
         self._register_exception_handlers()
-    
+
     def startup(self) -> None:
         logging.info("Startup called")
 
@@ -51,5 +52,6 @@ class API:
                 status_code=500,
                 content={"error": f"Internal Server Error: {str(exc)}"},
             )
+
 
 app = API().app

@@ -5,9 +5,9 @@ import voyageai
 from interface import EmbeddingInterface
 
 logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(levelname)s:     [LOGGING]: %(message)s'
+    level=logging.DEBUG, format="%(levelname)s:     [LOGGING]: %(message)s"
 )
+
 
 class VoyageEmbedding(EmbeddingInterface):
     MODEL = "voyage-code-3"

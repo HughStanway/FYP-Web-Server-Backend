@@ -1,17 +1,15 @@
-import os
 import logging
+import os
 
 import weaviate
 import weaviate.classes as wvc
 from database_exception import DatabaseException
 from interface import DatabaseInterface
-from weaviate.classes.init import AdditionalConfig, Timeout
-
 
 logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(levelname)s:     [LOGGING]: %(message)s'
+    level=logging.DEBUG, format="%(levelname)s:     [LOGGING]: %(message)s"
 )
+
 
 class Weaviate(DatabaseInterface):
     """
