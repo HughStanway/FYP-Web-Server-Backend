@@ -1,22 +1,39 @@
-# pylint: skip-file
-
+import logging
+from contextlib import asynccontextmanager
 from exceptions.api_error import APIError
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    api_instance = app.state.api_instance
+    logging.info("[-] Init Application Startup")
+    api_instance.startup()
+    yield
+    logging.info("[-] Init Application Shutdown")
+    api_instance.shutdown()
 
 class API:
     def __init__(self):
-        self.app = FastAPI()
+        self.app = FastAPI(lifespan=lifespan)
+        self.app.state.api_instance = self
         self._register_routes()
         self._register_exception_handlers()
-        self._register_startup_event()
+    
+    def startup(self) -> None:
+        logging.info("Startup called")
+
+    def shutdown(self) -> None:
+        logging.info("Shutdown called")
 
     def _register_routes(self):
         @self.app.post("/query")
         async def query():
-            raise APIError("Some error")
+            return {"response": "Test Message"}
 
     def _register_exception_handlers(self):
         @self.app.exception_handler(HTTPException)
@@ -32,12 +49,5 @@ class API:
                 status_code=500,
                 content={"error": f"Internal Server Error: {str(exc)}"},
             )
-
-    def _register_startup_event(self):
-        @self.app.on_event("startup")
-        async def on_startup():
-            # Setup database instance here
-            print("Application is starting up")
-
 
 app = API().app
