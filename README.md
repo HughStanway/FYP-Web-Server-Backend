@@ -43,3 +43,11 @@ Print server logs:
 ```[makefile]
 make logs
 ```
+
+Use the following tools to automatically format files before commiting to repository:
+
+```[makefile]
+make install-dev-tools
+make black
+make isort
+```

@@ -1,9 +1,10 @@
 # Default environment file
 ENV_FILE ?= .env
 
-# Project name (optional, to avoid conflicts with other projects)
+# Project name
 PROJECT_NAME ?= fyp-prototype
 
+# Build and start server
 build:
 	docker compose down --volumes --remove-orphans
 	docker compose up --build -d
@@ -16,7 +17,7 @@ rebuild:
 restart:
 	docker compose up -d --force-recreate
 
-# Stop containers but keep data
+# Stop containers temporarily but keep data
 stop:
 	docker compose stop
 
@@ -24,6 +25,19 @@ stop:
 down:
 	docker compose down --volumes --remove-orphans
 
-# Show logs
+# Show Docker logs
 logs:
 	docker compose logs -f
+
+#############
+# Dev Tools #
+#############
+
+install-dev-tools:
+	pip install -r requirements-dev.txt
+
+black:
+	black src/
+
+isort:
+	isort .

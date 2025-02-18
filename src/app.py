@@ -1,9 +1,10 @@
 # pylint: skip-file
 
+from exceptions.api_error import APIError
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from exceptions.api_error import APIError
 
 class API:
     def __init__(self):
@@ -37,5 +38,6 @@ class API:
         async def on_startup():
             # Setup database instance here
             print("Application is starting up")
+
 
 app = API().app
