@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 
 
-class DatabaseInterface(ABC):
+class EmbeddingInterface(ABC):
     """
-    Database Interface class ensures there is a insert
-    and query connection to database API
+    Embedding Interface class ensures there is embedding
+    connection to the embedding model
     """
 
     def __init__(self):
@@ -13,20 +13,17 @@ class DatabaseInterface(ABC):
     @abstractmethod
     def init(self) -> None:
         """
-        Init Method for Database Setup
+        Init Method for Embedding Model Setup
         """
 
     def _check_initialized(self) -> None:
         """Helper function to ensure init() was called before using insert/query."""
         if not self._initialized:
-            raise RuntimeError("Database has not been initialized. Call init() first.")
+            raise RuntimeError(
+                "Embedding model has not been initialized. Call init() first."
+            )
 
     @abstractmethod
-    def insert(self, data: dict) -> None:
+    def compute_embedding(self, filetext: str):
         """Insert Operation on Database"""
-        self._check_initialized()
-
-    @abstractmethod
-    def query(self, data: dict) -> dict:
-        """Query Operation on Database"""
         self._check_initialized()

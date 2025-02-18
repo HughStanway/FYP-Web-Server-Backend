@@ -1,9 +1,10 @@
+import os
+
 import weaviate
 import weaviate.classes as wvc
-from weaviate.classes.init import AdditionalConfig, Timeout
-from interface import DatabaseInterface
 from database_exception import DatabaseException
-import os
+from interface import DatabaseInterface
+from weaviate.classes.init import AdditionalConfig, Timeout
 
 
 class Weaviate(DatabaseInterface):
@@ -45,39 +46,38 @@ class Weaviate(DatabaseInterface):
             print("Weaviate client and collection initialised")
 
         except Exception as e:
-            raise DatabaseException(f"Error during client and collection setup: {e}", self.client)
+            raise DatabaseException(
+                f"Error during client and collection setup: {e}", self.client
+            )
 
     def insert(self, data: dict) -> None:
         super().insert(data)
-        if 'embedding' not in data:
+        if "embedding" not in data:
             raise DatabaseException("Embedding missing from insert call", self.client)
-        
-        if 'language' not in data:
+
+        if "language" not in data:
             raise DatabaseException("Language missing from insert call", self.client)
-        
-        if 'ts' not in data:
+
+        if "ts" not in data:
             raise DatabaseException("Timestamp missing from insert call", self.client)
 
         self.database.collection.data.insert(
-            properties={
-                "timestamp": data['ts'],
-                "language": data['language']
-            },
-            vector=data['embedding']
+            properties={"timestamp": data["ts"], "language": data["language"]},
+            vector=data["embedding"],
         )
 
     def query(self, data: dict) -> dict:
         super().query(data)
-        if 'embedding' not in data:
+        if "embedding" not in data:
             raise DatabaseException("Embedding missing from insert call", self.client)
 
         return self.database.collection.query.near_vector(
-            near_vector=data['embedding'],
+            near_vector=data["embedding"],
             limit=self.QUERY_LIMIT,
             return_metadata=wvc.query.MetadataQuery(certainty=True),
             where={
                 "path": ["language"],
                 "operator": "Equal",
-                "valueString": data['language']
-            }
+                "valueString": data["language"],
+            },
         )

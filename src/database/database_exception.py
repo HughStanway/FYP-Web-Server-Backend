@@ -1,5 +1,6 @@
 import weaviate
 
+
 class DatabaseException(Exception):
     def __init__(self, message: str, client: weaviate.Client) -> None:
         super().__init__(message)
