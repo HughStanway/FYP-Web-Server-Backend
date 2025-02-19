@@ -70,7 +70,13 @@ class API:
             if isinstance(embedding, JSONResponse):
                 return embedding
 
-            return {"embedding": embedding}
+            if (
+                not isinstance(self.database_client, Weaviate)
+                or not self.database_client.is_init()
+            ):
+                raise APIError("Internal Error: Database Client not initialized", 0)
+
+            return self.database_client.query({"embedding": embedding})
 
     def _register_exception_handlers(self):
         @self.app.exception_handler(HTTPException)

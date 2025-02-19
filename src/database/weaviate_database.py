@@ -3,6 +3,7 @@ import os
 
 import weaviate
 import weaviate.classes as wvc
+from fastapi.responses import JSONResponse
 from tenacity import retry, stop_after_attempt, wait_fixed
 
 from database.database_exception import DatabaseException
@@ -19,7 +20,6 @@ class Weaviate(DatabaseInterface):
     with the Weeaviate Database
     """
 
-    VOYAGE_EMBEDDING_DIMENSION = 1024
     QUERY_LIMIT = 5
 
     def __init__(self):
@@ -61,16 +61,25 @@ class Weaviate(DatabaseInterface):
                 f"Error during client and collection setup: {e}", self.client
             )
 
+    def is_init(self) -> bool:
+        return self._initialized
+
+    def _error(self, message: str) -> JSONResponse:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": 0,
+                "message": message,
+            },
+        )
+
     def insert(self, data: dict) -> None:
         super().insert(data)
         if "embedding" not in data:
-            raise DatabaseException("Embedding missing from insert call", self.client)
+            return self._error("Embedding missing from insert call")
 
         if "language" not in data:
-            raise DatabaseException("Language missing from insert call", self.client)
-
-        if "ts" not in data:
-            raise DatabaseException("Timestamp missing from insert call", self.client)
+            return self._error("Language missing from insert call")
 
         self.database.collection.data.insert(
             properties={"timestamp": data["ts"], "language": data["language"]},
@@ -78,17 +87,19 @@ class Weaviate(DatabaseInterface):
         )
 
     def query(self, data: dict) -> dict:
-        super().query(data)
-        if "embedding" not in data:
-            raise DatabaseException("Embedding missing from insert call", self.client)
+        try:
+            super().query(data)
+        except RuntimeError as e:
+            return self._error("Database client not initialised")
 
-        return self.database.collection.query.near_vector(
-            near_vector=data["embedding"],
-            limit=self.QUERY_LIMIT,
-            return_metadata=wvc.query.MetadataQuery(certainty=True),
-            where={
-                "path": ["language"],
-                "operator": "Equal",
-                "valueString": data["language"],
-            },
-        )
+        if "embedding" not in data:
+            return self._error("Embedding missing from query call")
+
+        try:
+            return self.collection.query.near_vector(
+                near_vector=data["embedding"],
+                limit=self.QUERY_LIMIT,
+                return_metadata=wvc.query.MetadataQuery(certainty=True),
+            )
+        except weaviate.exceptions.WeaviateBaseError as e:
+            return self._error(f"Database client internal error: {e}")
