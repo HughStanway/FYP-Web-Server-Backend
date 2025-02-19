@@ -3,11 +3,13 @@ import os
 
 import weaviate
 import weaviate.classes as wvc
-from database_exception import DatabaseException
-from interface import DatabaseInterface
+from tenacity import retry, stop_after_attempt, wait_fixed
+
+from database.database_exception import DatabaseException
+from database.interface import DatabaseInterface
 
 logging.basicConfig(
-    level=logging.DEBUG, format="%(levelname)s:     [LOGGING]: %(message)s"
+    level=logging.INFO, format="%(levelname)s:     [LOGGING]: %(message)s"
 )
 
 
@@ -30,9 +32,14 @@ class Weaviate(DatabaseInterface):
         else:
             raise KeyError("Environment variable COLLECTION_NAME is missing.")
 
+    @retry(stop=stop_after_attempt(5), wait=wait_fixed(2))
     def init(self) -> None:
         try:
-            self.client = weaviate.connect_to_local()
+            self.client = weaviate.connect_to_local(
+                host="weaviate",
+                port=8080,
+                grpc_port=50051,
+            )
 
             # Check if the collection exists otherwise create new one
             if any(

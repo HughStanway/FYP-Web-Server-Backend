@@ -1,8 +1,9 @@
 FROM python:3.12
 
-ENV COLLECTION_NAME=Fyp-prototype-collection
+ENV COLLECTION_NAME=FypPrototypeCollection
+ENV VOYAGE_API_KEY=
 
-WORKDIR /app
+WORKDIR /src
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 

@@ -3,7 +3,7 @@ import logging
 import weaviate
 
 logging.basicConfig(
-    level=logging.DEBUG, format="%(levelname)s:     [LOGGING]: %(message)s"
+    level=logging.INFO, format="%(levelname)s:     [LOGGING]: %(message)s"
 )
 
 

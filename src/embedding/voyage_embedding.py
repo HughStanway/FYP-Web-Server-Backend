@@ -2,10 +2,12 @@ import logging
 import os
 
 import voyageai
-from interface import EmbeddingInterface
+from fastapi.responses import JSONResponse
+
+from embedding.interface import EmbeddingInterface
 
 logging.basicConfig(
-    level=logging.DEBUG, format="%(levelname)s:     [LOGGING]: %(message)s"
+    level=logging.INFO, format="%(levelname)s:     [LOGGING]: %(message)s"
 )
 
 
@@ -27,10 +29,25 @@ class VoyageEmbedding(EmbeddingInterface):
         except voyageai.error.VoyageError as e:
             raise voyageai.error.APIError(f"Error during embedding setup: {e}")
 
+    def is_init(self):
+        return self._initialized
+
     def compute_embedding(self, filetext: str):
-        super().compute_embedding(filetext)
+        try:
+            super().compute_embedding(filetext)
+        except RuntimeError as e:
+            return JSONResponse(
+                status_code=500,
+                content={"error": 0, "message": "Embedding client not initialised"},
+            )
+
         try:
             return self.voyage_client.embed([filetext], model=self.MODEL).embeddings[0]
         except voyageai.error.VoyageError as e:
-            logging.error(f"Voyage API Error: {e}")
-            return None
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "error": 0,
+                    "message": f"Embedding client internal error: {e}",
+                },
+            )
