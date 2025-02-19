@@ -45,8 +45,19 @@ class API:
         logging.info("Shutdown called")
 
     def _register_routes(self):
-        @self.app.post("/query")
+        @self.app.post(
+            "/query",
+            summary="Query For Similar Snippets",
+            description="Send a payload and get the result from the database based on the embedding.",
+        )
         async def query(data: dict):
+            """
+            This endpoint accepts a JSON payload with a singe field: 'payload'.
+            It computes the embedding of the text using the voyage-code-3 model and
+            queries the database using this embedding.
+            Returns top k most similar results in the database to the user.
+            """
+
             # Check for code snippet in request
             if "payload" not in data:
                 raise APIError("Missing Request Field: No payload", 1)
@@ -58,25 +69,31 @@ class API:
                     2,
                 )
 
+            # Check embedding client is initialised
             if (
                 not isinstance(self.embedding_client, VoyageEmbedding)
                 or not self.embedding_client.is_init()
             ):
                 raise APIError("Internal Error: Embedding Client not initialized", 0)
 
+            # Compute embedding
             filetext = data["payload"]
             embedding = self.embedding_client.compute_embedding(filetext)
 
+            # Check if embedding client returned an error
             if isinstance(embedding, JSONResponse):
                 return embedding
 
+            # Check database client is initialised
             if (
                 not isinstance(self.database_client, Weaviate)
                 or not self.database_client.is_init()
             ):
                 raise APIError("Internal Error: Database Client not initialized", 0)
 
-            return self.database_client.query({"embedding": embedding})
+            # Make database query ands return
+            query_result = self.database_client.query({"embedding": embedding})
+            return query_result
 
     def _register_exception_handlers(self):
         @self.app.exception_handler(HTTPException)
