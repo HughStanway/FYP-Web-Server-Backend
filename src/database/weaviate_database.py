@@ -61,6 +61,9 @@ class Weaviate(DatabaseInterface):
                 f"Error during client and collection setup: {e}", self.client
             )
 
+    def clean_shutdown(self) -> None:
+        self.client.close()
+
     def is_init(self) -> bool:
         return self._initialized
 
@@ -74,17 +77,28 @@ class Weaviate(DatabaseInterface):
         )
 
     def insert(self, data: dict) -> None:
-        super().insert(data)
+        try:
+            super().insert(data)
+        except RuntimeError as e:
+            logging.error("Database client not initialised")
+            return
+
         if "embedding" not in data:
-            return self._error("Embedding missing from insert call")
+            logging.error("Embedding missing from insert call")
+            return
 
-        if "language" not in data:
-            return self._error("Language missing from insert call")
+        if "hash" not in data:
+            logging.error("Filetext hash missing from insert call")
+            return
 
-        self.database.collection.data.insert(
-            properties={"timestamp": data["ts"], "language": data["language"]},
-            vector=data["embedding"],
-        )
+        try:
+            self.collection.data.insert(
+                properties={"hash": data["hash"]},
+                vector=data["embedding"],
+            )
+        except weaviate.exceptions.WeaviateBaseError as e:
+            logging.error(f"Database client internal error: {e}")
+            return
 
     def query(self, data: dict) -> dict:
         try:

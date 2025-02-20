@@ -1,3 +1,4 @@
+import hashlib
 import logging
 from contextlib import asynccontextmanager
 from exceptions.api_error import APIError
@@ -5,6 +6,7 @@ from exceptions.api_error import APIError
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
+from database.database_updater import DatabaseUpdater
 from database.weaviate_database import Weaviate
 from embedding.voyage_embedding import VoyageEmbedding
 
@@ -32,6 +34,7 @@ class API:
 
         self.database_client = None
         self.embedding_client = None
+        self.database_updater = None
 
     def startup(self) -> None:
         logging.info("Startup called")
@@ -41,8 +44,17 @@ class API:
         self.database_client = Weaviate()
         self.database_client.init()
 
+        self.database_updater = DatabaseUpdater(self.database_client)
+        self.database_updater.init()
+        self.database_updater.start_worker()
+
     def shutdown(self) -> None:
         logging.info("Shutdown called")
+        self.database_updater.stop_worker()
+        self.database_client.clean_shutdown()
+
+    def _compute_hash(self, filetext: str) -> str:
+        return hashlib.sha256(filetext.encode()).hexdigest()
 
     def _register_routes(self):
         @self.app.post(
@@ -76,8 +88,9 @@ class API:
             ):
                 raise APIError("Internal Error: Embedding Client not initialized", 0)
 
-            # Compute embedding
+            # Get filetext, it's hash and embedding
             filetext = data["payload"]
+            filetext_hash = self._compute_hash(filetext)
             embedding = self.embedding_client.compute_embedding(filetext)
 
             # Check if embedding client returned an error
@@ -91,8 +104,17 @@ class API:
             ):
                 raise APIError("Internal Error: Database Client not initialized", 0)
 
-            # Make database query ands return
+            # Insert query into database if client is initialized,
+            # on a seperate thread for efficiency
+            if (
+                isinstance(self.database_updater, DatabaseUpdater)
+                and self.database_updater.is_init()
+            ):
+                self.database_updater.add_to_queue(filetext, filetext_hash, embedding)
+
+            # Make database query process results
             query_result = self.database_client.query({"embedding": embedding})
+
             return query_result
 
     def _register_exception_handlers(self):

@@ -6,7 +6,7 @@ PROJECT_NAME ?= fyp-prototype
 
 # Build and start server
 build:
-	docker compose down --volumes --remove-orphans
+	docker compose down
 	docker compose up --build -d
 
 # Rebuild after making changes
@@ -17,13 +17,9 @@ rebuild:
 restart:
 	docker compose up -d --force-recreate
 
-# Stop containers temporarily but keep data
-stop:
-	docker compose stop
-
 # Stop and remove everything (containers, networks, and volumes)
 down:
-	docker compose down --volumes --remove-orphans
+	docker compose down
 
 # Show Docker logs
 logs:

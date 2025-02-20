@@ -5,6 +5,7 @@ services:
       - "8000:8000"
     depends_on: 
       - weaviate
+      - redis
 
   nginx:
     image: nginx:latest
@@ -36,6 +37,16 @@ services:
       ENABLE_API_BASED_MODULES: 'true'
       ENABLE_MODULES: 'text2vec-ollama,generative-ollama'
       CLUSTER_HOSTNAME: 'node1'
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+
 volumes:
   weaviate_data:
     name: fyp-weaviate-volume
+  redis_data:
+    name: fyp-redis-store
