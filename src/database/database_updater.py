@@ -35,7 +35,6 @@ class DatabaseUpdater:
         while self.running:
             try:
                 filetext, filetext_hash, embedding = self.task_queue.get(timeout=1)
-                logging.info("Insert into redis called")
 
                 # If filetext_hash is not in redis store it,
                 # otherwise ingore and continue
@@ -64,3 +63,7 @@ class DatabaseUpdater:
 
     def add_to_queue(self, *items) -> None:
         self.task_queue.put(items)
+
+    def get_from_redis(self, filetext_hash) -> str:
+        if self.redis_client.exists(filetext_hash):
+            return self.redis_client.get(filetext_hash)

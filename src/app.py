@@ -55,6 +55,18 @@ class API:
 
     def _compute_hash(self, filetext: str) -> str:
         return hashlib.sha256(filetext.encode()).hexdigest()
+    
+    def _format_response(self, response):
+        res = []
+        for result in response:
+            snippet = self.database_updater.get_from_redis(result.properties["hash"])
+            res.append(
+                {
+                    "snippet": snippet,
+                    "certainty": result.metadata.certainty
+                }
+            )
+        return {"response": res}
 
     def _register_routes(self):
         @self.app.post(
@@ -103,6 +115,9 @@ class API:
                 or not self.database_client.is_init()
             ):
                 raise APIError("Internal Error: Database Client not initialized", 0)
+            
+            # Make database query process results, before any database updates are made
+            query_result = self.database_client.query({"embedding": embedding}).objects
 
             # Insert query into database if client is initialized,
             # on a seperate thread for efficiency
@@ -112,10 +127,7 @@ class API:
             ):
                 self.database_updater.add_to_queue(filetext, filetext_hash, embedding)
 
-            # Make database query process results
-            query_result = self.database_client.query({"embedding": embedding})
-
-            return query_result
+            return self._format_response(query_result)
 
     def _register_exception_handlers(self):
         @self.app.exception_handler(HTTPException)
