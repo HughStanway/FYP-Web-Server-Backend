@@ -17,9 +17,13 @@ rebuild:
 restart:
 	docker compose up -d --force-recreate
 
-# Stop and remove everything (containers, networks, and volumes)
+# Stop and remove containers
 down:
 	docker compose down
+
+# Stop and remove everything (containers, networks, and volumes)
+prune:
+	docker compose down --volumes --remove-orphans
 
 # Show Docker logs
 logs:
