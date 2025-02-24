@@ -25,33 +25,15 @@ class Weaviate(DatabaseInterface):
     def __init__(self):
         super().__init__()
         self.client = None
-        self.collection = None
-
-        if "COLLECTION_NAME" in os.environ:
-            self.collection_name = os.environ["COLLECTION_NAME"]
-        else:
-            raise KeyError("Environment variable COLLECTION_NAME is missing.")
 
     @retry(stop=stop_after_attempt(5), wait=wait_fixed(2))
-    def init(self) -> None:
+    def init(self):
         try:
             self.client = weaviate.connect_to_local(
                 host="weaviate",
                 port=8080,
                 grpc_port=50051,
             )
-
-            # Check if the collection exists otherwise create new one
-            if any(
-                col == self.collection_name
-                for col in self.client.collections.list_all().keys()
-            ):
-                self.collection = self.client.collections.get(self.collection_name)
-            else:
-                self.collection = self.client.collections.create(
-                    self.collection_name,
-                    vectorizer_config=wvc.config.Configure.Vectorizer.none(),
-                )
 
             self._initialized = True
             logging.info("Weaviate client and collection initialised")
@@ -61,13 +43,13 @@ class Weaviate(DatabaseInterface):
                 f"Error during client and collection setup: {e}", self.client
             )
 
-    def clean_shutdown(self) -> None:
+    def clean_shutdown(self):
         self.client.close()
 
     def is_init(self) -> bool:
         return self._initialized
 
-    def _error(self, message: str) -> JSONResponse:
+    def _error(self, message: str, error: int = 0) -> JSONResponse:
         return JSONResponse(
             status_code=500,
             content={
@@ -75,20 +57,37 @@ class Weaviate(DatabaseInterface):
                 "message": message,
             },
         )
+    
+    def does_collection_exist(self, collection_name: str):
+        if any(
+                col == collection_name
+                for col in self.client.collections.list_all().keys()
+            ):
+            return True
+        return False
+    
+    def create_collection(self, collection_name: str):
+        try:
+            self.collection = self.client.collections.create(
+                collection_name,
+                vectorizer_config=wvc.config.Configure.Vectorizer.none(),
+            )
 
-    def insert(self, data: dict) -> None:
+            return JSONResponse(
+            status_code=500,
+            content={
+                "message": "Collection initialised successfully",
+            },
+        )
+        except weaviate.exceptions.WeaviateBaseError as e:
+            return self._error(f"Cannot create collection: {e}", 0) # Internal error
+
+
+    def insert(self, data: dict):
         try:
             super().insert(data)
         except RuntimeError as e:
             logging.error("Database client not initialised")
-            return
-
-        if "embedding" not in data:
-            logging.error("Embedding missing from insert call")
-            return
-
-        if "hash" not in data:
-            logging.error("Filetext hash missing from insert call")
             return
 
         try:
@@ -100,17 +99,16 @@ class Weaviate(DatabaseInterface):
             logging.error(f"Database client internal error: {e}")
             return
 
-    def query(self, data: dict) -> dict:
+    def query(self, data: dict, collection_name: str):
         try:
             super().query(data)
         except RuntimeError as e:
             return self._error("Database client not initialised")
 
-        if "embedding" not in data:
-            return self._error("Embedding missing from query call")
-
         try:
-            return self.collection.query.near_vector(
+            collection = self.client.collections.get(collection_name)
+
+            return collection.query.near_vector(
                 near_vector=data["embedding"],
                 limit=self.QUERY_LIMIT,
                 return_metadata=wvc.query.MetadataQuery(certainty=True),
