@@ -83,9 +83,9 @@ class API:
         )
         async def query(data: dict):
             """
-            This endpoint accepts a JSON payload with a singe field: 'payload'.
+            This endpoint accepts a JSON payload with two fields: 'payload' and 'collectionName;.
             It computes the embedding of the text using the voyage-code-3 model and
-            queries the database using this embedding.
+            queries the corresponding database collection using this embedding.
             Returns top k most similar results in the database to the user.
             """
 
@@ -188,6 +188,14 @@ class API:
             # Check for collection name
             if "collectionName" not in data:
                 raise APIError("Missing Request Field: No collection name", 3)
+            collection_name = data["collectionName"]
+            
+            # Check collection name is the correct type
+            if not isinstance(collection_name, str):
+                raise APIError(
+                    f"collectionName should be type str. Instead got type {type(data['collectionName'])}",
+                    2,
+                )
 
     def _register_exception_handlers(self):
         @self.app.exception_handler(HTTPException)
