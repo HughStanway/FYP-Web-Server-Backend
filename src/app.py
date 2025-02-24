@@ -1,14 +1,15 @@
 import hashlib
-import re
 import logging
+import re
+import json
 from contextlib import asynccontextmanager
 from exceptions.api_error import APIError
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-#from database.database_updater import DatabaseUpdater
 from database.weaviate_database import Weaviate
+from database.redis_database import RedisDatabase
 from embedding.voyage_embedding import VoyageEmbedding
 
 logging.basicConfig(
@@ -35,6 +36,7 @@ class API:
 
         self.database_client = None
         self.embedding_client = None
+        self.redis_client = None
         self.database_updater = None
 
     def startup(self):
@@ -45,9 +47,8 @@ class API:
         self.database_client = Weaviate()
         self.database_client.init()
 
-        #self.database_updater = DatabaseUpdater(self.database_client)
-        #self.database_updater.init()
-        #self.database_updater.start_worker()
+        self.redis_client = RedisDatabase()
+        self.redis_client.init()
 
     def shutdown(self):
         logging.info("Shutdown called")
@@ -56,21 +57,20 @@ class API:
 
     def _compute_hash(self, filetext: str):
         return hashlib.sha256(filetext.encode()).hexdigest()
-    
+
     def _format_response(self, response):
         res = []
-        '''
         for result in response:
-            snippet = self.database_updater.get_from_redis(result.properties["hash"])
-            res.append(
-                {
-                    "snippet": snippet,
-                    "certainty": result.metadata.certainty
-                }
-            )
-        '''
+            snippet = self.redis_client.get(result.properties["hash"])
+
+            # Check if redis client returned an error
+            if isinstance(snippet, JSONResponse):
+                error = json.loads(snippet.body.decode("utf-8"))
+                raise APIError(error["message"], error["error"])
+
+            res.append({"snippet": snippet, "certainty": result.metadata.certainty})
         return {"response": res}
-        
+
     def _is_collection_name_valid(self, collection_name: str):
         valid_format = r"^[A-Z][_0-9A-Za-z]*$"
         return bool(re.fullmatch(valid_format, collection_name))
@@ -99,20 +99,20 @@ class API:
                     f"Payload should be type str. Instead got type {type(data['payload'])}",
                     2,
                 )
-            
+
             # Check for collection name
             if "collectionName" not in data:
                 raise APIError("Missing Request Field: No collectionName", 3)
-            
+
             # Check collection name is the correct type
             if not isinstance(data["collectionName"], str):
                 raise APIError(
                     f"collectionName should be type str. Instead got type {type(data['collectionName'])}",
                     2,
                 )
-            
+
             # Check collection name exists
-            collection_name = data['collectionName']
+            collection_name = data["collectionName"]
             if not self.database_client.does_collection_exist(collection_name):
                 raise APIError("Cannot query from collection that doesn't exist", 5)
 
@@ -137,16 +137,18 @@ class API:
                 or not self.database_client.is_init()
             ):
                 raise APIError("Internal Error: Database Client not initialized", 0)
-            
+
             # Make database query and process results
-            query_result = self.database_client.query({"embedding": embedding}, collection_name).objects
+            query_result = self.database_client.query(
+                {"embedding": embedding}, collection_name
+            ).objects
             return self._format_response(query_result)
-    
+
         @self.app.post(
-                "/create",
-                summary="Create new collection instance",
-                description="Creates a new Vector Embedding Database instance",
-            )
+            "/create",
+            summary="Create new collection instance",
+            description="Creates a new Vector Embedding Database instance",
+        )
         async def create(data: dict):
             """
             This endpoint accepts a JSON payload with a singe field: 'collectionName'.
@@ -157,22 +159,24 @@ class API:
             # Check for collection name
             if "collectionName" not in data:
                 raise APIError("Missing Request Field: No collection name", 3)
-            collection_name = data['collectionName']
-            
+            collection_name = data["collectionName"]
+
             # Check collection name is the correct type
             if not isinstance(collection_name, str):
                 raise APIError(
                     f"collectionName should be type str. Instead got type {type(data['collectionName'])}",
                     2,
                 )
-            
+
             # Check collection name is valid format
             if not self._is_collection_name_valid(collection_name):
-                raise APIError("Collection name must follow the format: /^[A-Z][_0-9A-Za-z]*$/", 2)
+                raise APIError(
+                    "Collection name must follow the format: /^[A-Z][_0-9A-Za-z]*$/", 2
+                )
 
             if self.database_client.does_collection_exist(collection_name):
                 raise APIError("Cannot create collection that already exists", 4)
-            
+
             return self.database_client.create_collection(collection_name)
 
         @self.app.post(

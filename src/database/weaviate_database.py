@@ -53,19 +53,18 @@ class Weaviate(DatabaseInterface):
         return JSONResponse(
             status_code=500,
             content={
-                "error": 0,
+                "error": error,
                 "message": message,
             },
         )
-    
+
     def does_collection_exist(self, collection_name: str):
         if any(
-                col == collection_name
-                for col in self.client.collections.list_all().keys()
-            ):
+            col == collection_name for col in self.client.collections.list_all().keys()
+        ):
             return True
         return False
-    
+
     def create_collection(self, collection_name: str):
         try:
             self.collection = self.client.collections.create(
@@ -74,14 +73,13 @@ class Weaviate(DatabaseInterface):
             )
 
             return JSONResponse(
-            status_code=500,
-            content={
-                "message": "Collection initialised successfully",
-            },
-        )
+                status_code=500,
+                content={
+                    "message": "Collection initialised successfully",
+                },
+            )
         except weaviate.exceptions.WeaviateBaseError as e:
-            return self._error(f"Cannot create collection: {e}", 0) # Internal error
-
+            return self._error(f"Cannot create collection: {e}", 0)  # Internal error
 
     def insert(self, data: dict):
         try:
