@@ -51,3 +51,6 @@ class RedisClientError(CodeSearchError):
 
 class EmbeddingError(CodeSearchError):
     pass
+
+class ProcessInsertError(CodeSearchError):
+    pass
