@@ -1,7 +1,7 @@
 import logging
+from exceptions import RedisClientError
 
 import redis
-from fastapi.responses import JSONResponse
 import redis.exceptions
 
 logging.basicConfig(
@@ -23,32 +23,27 @@ class RedisDatabase:
             self._initialized = True
             logging.info("Redis client initialised")
         except redis.exceptions.RedisError as e:
-            raise RuntimeError(f"Error connecting to redis: {e}")
+            raise RedisClientError(f"Error connecting to redis: {e}", 0)
 
-    def _error(self, message: str, error: int = 0) -> JSONResponse:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "error": error,
-                "message": message,
-            },
-        )
+    def _check_init(self):
+        if not self._initialized:
+            raise RedisClientError(
+                "Redis client not initialised. Call init() first.", 0
+            )
 
     def get(self, key: str):
-        if not self._initialized:
-            return self._error("Redis client not initialised. Call init() first.")
+        self._check_init()
 
         try:
             if self._redis_client.exists(key):
                 return self._redis_client.get(key)
         except redis.exceptions.RedisError as e:
-            return self._error(f"Redis database error: {e}")
+            raise RedisClientError(f"Redis database error: {e}", 0)
 
     def put(self, key: str, value: str):
-        if not self._initialized:
-            return self._error("Redis client not initialised. Call init() first.")
+        self._check_init
 
         try:
             self._redis_client.set(key, value)
         except redis.exceptions.RedisError as e:
-            return self._error(f"Redis database error: {e}")
+            raise RedisClientError(f"Redis database error: {e}", 0)

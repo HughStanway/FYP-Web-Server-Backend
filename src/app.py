@@ -1,16 +1,15 @@
 import hashlib
 import logging
 import re
-import json
 from contextlib import asynccontextmanager
-from exceptions.api_error import APIError
+from exceptions import APIError, DatabaseError, EmbeddingError, RedisClientError
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from database.weaviate_database import Weaviate
-from database.redis_database import RedisDatabase
-from embedding.voyage_embedding import VoyageEmbedding
+from redis_database import RedisDatabase
+from voyage_embedding import VoyageEmbedding
+from weaviate_database import Weaviate
 
 logging.basicConfig(
     level=logging.INFO, format="%(levelname)s:     [LOGGING]: %(message)s"
@@ -34,10 +33,9 @@ class API:
         self._register_routes()
         self._register_exception_handlers()
 
-        self.database_client = None
-        self.embedding_client = None
-        self.redis_client = None
-        self.database_updater = None
+        self.database_client: Weaviate = None
+        self.embedding_client: VoyageEmbedding = None
+        self.redis_client: RedisDatabase = None
 
     def startup(self):
         logging.info("Startup called")
@@ -62,18 +60,22 @@ class API:
         res = []
         for result in response:
             snippet = self.redis_client.get(result.properties["hash"])
-
-            # Check if redis client returned an error
-            if isinstance(snippet, JSONResponse):
-                error = json.loads(snippet.body.decode("utf-8"))
-                raise APIError(error["message"], error["error"])
-
             res.append({"snippet": snippet, "certainty": result.metadata.certainty})
         return {"response": res}
 
     def _is_collection_name_valid(self, collection_name: str):
         valid_format = r"^[A-Z][_0-9A-Za-z]*$"
         return bool(re.fullmatch(valid_format, collection_name))
+
+    def _get_field(self, data: dict, field: str, missing_error: int, type_error: int, missing_msg: str):
+        # Check for field in request
+        if field not in data:
+            raise APIError(missing_msg, missing_error)
+        value = data[field]
+        # Check field is the correct type
+        if not isinstance(value, str):
+            raise APIError(f"{field} should be type str. Instead got type {type(value)}", type_error)
+        return value
 
     def _register_routes(self):
         @self.app.post(
@@ -89,54 +91,18 @@ class API:
             Returns top k most similar results in the database to the user.
             """
 
-            # Check for code snippet in request
-            if "payload" not in data:
-                raise APIError("Missing Request Field: No payload", 1)
+            # Check for code snippet in request and check it is the correct type
+            filetext = self._get_field(data, "payload", 1, 2, "Missing Request Field: No payload")
 
-            # Check payload is the correct type
-            if not isinstance(data["payload"], str):
-                raise APIError(
-                    f"Payload should be type str. Instead got type {type(data['payload'])}",
-                    2,
-                )
-
-            # Check for collection name
-            if "collectionName" not in data:
-                raise APIError("Missing Request Field: No collectionName", 3)
-
-            # Check collection name is the correct type
-            if not isinstance(data["collectionName"], str):
-                raise APIError(
-                    f"collectionName should be type str. Instead got type {type(data['collectionName'])}",
-                    2,
-                )
+            # Check for collection name and check it is the correct type
+            collection_name = self._get_field(data, "collectionName", 3, 2, "Missing Request Field: No collectionName")
 
             # Check collection name exists
-            collection_name = data["collectionName"]
             if not self.database_client.does_collection_exist(collection_name):
                 raise APIError("Cannot query from collection that doesn't exist", 5)
 
-            # Check embedding client is initialised
-            if (
-                not isinstance(self.embedding_client, VoyageEmbedding)
-                or not self.embedding_client.is_init()
-            ):
-                raise APIError("Internal Error: Embedding Client not initialized", 0)
-
             # Get filetext and embedding
-            filetext = data["payload"]
             embedding = self.embedding_client.compute_embedding(filetext)
-
-            # Check if embedding client returned an error
-            if isinstance(embedding, JSONResponse):
-                return embedding
-
-            # Check database client is initialised
-            if (
-                not isinstance(self.database_client, Weaviate)
-                or not self.database_client.is_init()
-            ):
-                raise APIError("Internal Error: Database Client not initialized", 0)
 
             # Make database query and process results
             query_result = self.database_client.query(
@@ -156,23 +122,12 @@ class API:
             exist with that id already.
             """
 
-            # Check for collection name
-            if "collectionName" not in data:
-                raise APIError("Missing Request Field: No collection name", 3)
-            collection_name = data["collectionName"]
-
-            # Check collection name is the correct type
-            if not isinstance(collection_name, str):
-                raise APIError(
-                    f"collectionName should be type str. Instead got type {type(data['collectionName'])}",
-                    2,
-                )
+            # Check for collection name and check it is the correct type
+            collection_name = self._get_field(data, "collectionName", 3, 2, "Missing Request Field: No collection name")
 
             # Check collection name is valid format
             if not self._is_collection_name_valid(collection_name):
-                raise APIError(
-                    "Collection name must follow the format: /^[A-Z][_0-9A-Za-z]*$/", 2
-                )
+                raise APIError("Collection name must follow the format: /^[A-Z][_0-9A-Za-z]*$/", 2)
 
             if self.database_client.does_collection_exist(collection_name):
                 raise APIError("Cannot create collection that already exists", 4)
@@ -185,17 +140,14 @@ class API:
             description="Provide the sample data used to populate the embeddings in a database collection",
         )
         async def insert(data: dict):
-            # Check for collection name
-            if "collectionName" not in data:
-                raise APIError("Missing Request Field: No collection name", 3)
-            collection_name = data["collectionName"]
-            
-            # Check collection name is the correct type
-            if not isinstance(collection_name, str):
-                raise APIError(
-                    f"collectionName should be type str. Instead got type {type(data['collectionName'])}",
-                    2,
-                )
+            """
+            Doc string
+            """
+
+            # Check for collection name and check it is the correct type
+            collection_name = self._get_field(data, "collectionName", 3, 2, "Missing Request Field: No collection name")
+
+            # Additional insert logic goes here
 
     def _register_exception_handlers(self):
         @self.app.exception_handler(HTTPException)
@@ -205,12 +157,18 @@ class API:
                 content={"message": f"Error: {exc.detail}"},
             )
 
-        @self.app.exception_handler(APIError)
-        async def general_exception_handler(request: Request, exc: APIError):
+        async def generic_exception_handler(request: Request, exc):
+            error_code = getattr(exc, "error_code", getattr(exc, "error_codee", None))
             return JSONResponse(
                 status_code=500,
-                content={"error": exc.error_code, "message": str(exc.message)},
+                content={"error": error_code, "message": str(exc.message)},
             )
+
+        self.app.add_exception_handler(APIError, generic_exception_handler)
+        self.app.add_exception_handler(RedisClientError, generic_exception_handler)
+        self.app.add_exception_handler(EmbeddingError, generic_exception_handler)
+        self.app.add_exception_handler(DatabaseError, generic_exception_handler)
 
 
 app = API().app
+

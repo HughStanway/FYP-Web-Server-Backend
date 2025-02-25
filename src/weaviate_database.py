@@ -1,13 +1,12 @@
 import logging
-import os
+from exceptions import DatabaseError
 
 import weaviate
 import weaviate.classes as wvc
 from fastapi.responses import JSONResponse
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-from database.database_exception import DatabaseException
-from database.interface import DatabaseInterface
+from interface import DatabaseInterface
 
 logging.basicConfig(
     level=logging.INFO, format="%(levelname)s:     [LOGGING]: %(message)s"
@@ -15,11 +14,6 @@ logging.basicConfig(
 
 
 class Weaviate(DatabaseInterface):
-    """
-    Weaviate Class Controls all setup and Interactions
-    with the Weeaviate Database
-    """
-
     QUERY_LIMIT = 5
 
     def __init__(self):
@@ -38,32 +32,30 @@ class Weaviate(DatabaseInterface):
             self._initialized = True
             logging.info("Weaviate client and collection initialised")
 
-        except Exception as e:
-            raise DatabaseException(
+        except weaviate.exceptions.WeaviateBaseError as e:
+            raise DatabaseError(
                 f"Error during client and collection setup: {e}", self.client
             )
 
     def clean_shutdown(self):
         self.client.close()
 
-    def is_init(self) -> bool:
+    def is_init(self):
         return self._initialized
 
-    def _error(self, message: str, error: int = 0) -> JSONResponse:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "error": error,
-                "message": message,
-            },
-        )
+    def _error(self, message: str, error: int = 0):
+        raise DatabaseError(message, error)
 
     def does_collection_exist(self, collection_name: str):
-        if any(
-            col == collection_name for col in self.client.collections.list_all().keys()
-        ):
-            return True
-        return False
+        try:
+            if any(
+                col == collection_name
+                for col in self.client.collections.list_all().keys()
+            ):
+                return True
+            return False
+        except weaviate.exceptions.WeaviateBaseError as e:
+            self._error(f"Cannot create collection: {e}", 0)
 
     def create_collection(self, collection_name: str):
         try:
@@ -79,14 +71,10 @@ class Weaviate(DatabaseInterface):
                 },
             )
         except weaviate.exceptions.WeaviateBaseError as e:
-            return self._error(f"Cannot create collection: {e}", 0)  # Internal error
+            self._error(f"Cannot create collection: {e}", 0)
 
     def insert(self, data: dict):
-        try:
-            super().insert(data)
-        except RuntimeError as e:
-            logging.error("Database client not initialised")
-            return
+        super().insert(data)
 
         try:
             self.collection.data.insert(
@@ -94,14 +82,10 @@ class Weaviate(DatabaseInterface):
                 vector=data["embedding"],
             )
         except weaviate.exceptions.WeaviateBaseError as e:
-            logging.error(f"Database client internal error: {e}")
-            return
+            self._error(f"Database client internal error: {e}", 0)
 
     def query(self, data: dict, collection_name: str):
-        try:
-            super().query(data)
-        except RuntimeError as e:
-            return self._error("Database client not initialised")
+        super().query(data)
 
         try:
             collection = self.client.collections.get(collection_name)
@@ -112,4 +96,4 @@ class Weaviate(DatabaseInterface):
                 return_metadata=wvc.query.MetadataQuery(certainty=True),
             )
         except weaviate.exceptions.WeaviateBaseError as e:
-            return self._error(f"Database client internal error: {e}")
+            self._error(f"Database client internal error: {e}", 0)

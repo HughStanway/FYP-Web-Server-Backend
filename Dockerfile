@@ -1,6 +1,6 @@
 FROM python:3.12
 
-ENV VOYAGE_API_KEY=pa-
+ENV VOYAGE_API_KEY=pa-TxEv8WHHYb0aW_sb1hFoIUp7uLnldoR8esBXqs_lHDT
 
 WORKDIR /src
 COPY requirements.txt .
