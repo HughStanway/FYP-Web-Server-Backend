@@ -4,3 +4,4 @@ python-multipart
 weaviate-client
 voyageai
 redis
+javalang

@@ -6,6 +6,8 @@ services:
     depends_on: 
       - weaviate
       - redis
+    volumes:
+      - /srv/git/:/srv/git/
 
   nginx:
     image: nginx:latest

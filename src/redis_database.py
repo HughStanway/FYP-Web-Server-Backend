@@ -47,3 +47,6 @@ class RedisDatabase:
             self._redis_client.set(key, value)
         except redis.exceptions.RedisError as e:
             raise RedisClientError(f"Redis database error: {e}", 0)
+
+    def exists(self, key: str):
+        return self._redis_client.exists(key)

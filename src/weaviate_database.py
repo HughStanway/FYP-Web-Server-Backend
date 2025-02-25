@@ -65,7 +65,7 @@ class Weaviate(DatabaseInterface):
             )
 
             return JSONResponse(
-                status_code=500,
+                status_code=200,
                 content={
                     "message": "Collection initialised successfully",
                 },
@@ -73,11 +73,12 @@ class Weaviate(DatabaseInterface):
         except weaviate.exceptions.WeaviateBaseError as e:
             self._error(f"Cannot create collection: {e}", 0)
 
-    def insert(self, data: dict):
+    def insert(self, data: dict, collection_name: str):
         super().insert(data)
 
         try:
-            self.collection.data.insert(
+            collection = self.client.collections.get(collection_name)
+            collection.data.insert(
                 properties={"hash": data["hash"]},
                 vector=data["embedding"],
             )

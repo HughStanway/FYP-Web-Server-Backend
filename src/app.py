@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from redis_database import RedisDatabase
 from voyage_embedding import VoyageEmbedding
 from weaviate_database import Weaviate
+from process_insert import ProcessInsert
 
 logging.basicConfig(
     level=logging.INFO, format="%(levelname)s:     [LOGGING]: %(message)s"
@@ -48,9 +49,12 @@ class API:
         self.redis_client = RedisDatabase()
         self.redis_client.init()
 
+        self.process_insert = ProcessInsert(self.embedding_client, self.database_client, self.redis_client)
+        self.process_insert.start_worker()
+
     def shutdown(self):
         logging.info("Shutdown called")
-        self.database_updater.stop_worker()
+        self.process_insert.stop_worker()
         self.database_client.clean_shutdown()
 
     def _compute_hash(self, filetext: str):
@@ -103,7 +107,7 @@ class API:
 
             # Check for code snippet in request and check it is the correct type
             filetext = self._check_field(
-                data, "payload", 1, 2, "Missing Request Field: No payload"
+                data, "payload", 1, 2, "Missing Request Field: payload"
             )
 
             # Check for collection name and check it is the correct type
@@ -175,7 +179,25 @@ class API:
                 "Missing Request Field: No collection name",
             )
 
-            # Additional insert logic goes here
+            # Check collection name exists
+            if not self.database_client.does_collection_exist(data["collectionName"]):
+                raise APIError("Cannot insert into collection that doesn't exist", 5)
+
+            if "repositories" not in data:
+                raise APIError("Missing Request Field: payload", 6)
+
+            data_formatted = {
+                "collectionName": data["collectionName"],
+                "repositories": data["repositories"]
+            }
+            self.process_insert.add_to_queue(data_formatted)
+
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "message": "Initialised database insert process.",
+                },
+            )
 
     def _register_exception_handlers(self):
         @self.app.exception_handler(HTTPException)

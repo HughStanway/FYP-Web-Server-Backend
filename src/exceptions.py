@@ -1,4 +1,4 @@
-""""
+""" "
 Core exceptions raised by the Code Search client
 """
 
@@ -16,6 +16,7 @@ import weaviate
 # 3: Missing collectionName field
 # 4: Cannot create collection that already exists
 # 5: Cannot query from collection that doesn't exist
+# 6: Missing repositores field
 
 
 class CodeSearchError(Exception):
@@ -51,6 +52,7 @@ class RedisClientError(CodeSearchError):
 
 class EmbeddingError(CodeSearchError):
     pass
+
 
 class ProcessInsertError(CodeSearchError):
     pass
