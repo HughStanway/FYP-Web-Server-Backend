@@ -67,14 +67,24 @@ class API:
         valid_format = r"^[A-Z][_0-9A-Za-z]*$"
         return bool(re.fullmatch(valid_format, collection_name))
 
-    def _get_field(self, data: dict, field: str, missing_error: int, type_error: int, missing_msg: str):
+    def _check_field(
+        self,
+        data: dict,
+        field: str,
+        missing_error: int,
+        type_error: int,
+        missing_msg: str,
+    ):
         # Check for field in request
         if field not in data:
             raise APIError(missing_msg, missing_error)
         value = data[field]
         # Check field is the correct type
         if not isinstance(value, str):
-            raise APIError(f"{field} should be type str. Instead got type {type(value)}", type_error)
+            raise APIError(
+                f"{field} should be type str. Instead got type {type(value)}",
+                type_error,
+            )
         return value
 
     def _register_routes(self):
@@ -92,10 +102,14 @@ class API:
             """
 
             # Check for code snippet in request and check it is the correct type
-            filetext = self._get_field(data, "payload", 1, 2, "Missing Request Field: No payload")
+            filetext = self._check_field(
+                data, "payload", 1, 2, "Missing Request Field: No payload"
+            )
 
             # Check for collection name and check it is the correct type
-            collection_name = self._get_field(data, "collectionName", 3, 2, "Missing Request Field: No collectionName")
+            collection_name = self._check_field(
+                data, "collectionName", 3, 2, "Missing Request Field: No collectionName"
+            )
 
             # Check collection name exists
             if not self.database_client.does_collection_exist(collection_name):
@@ -123,11 +137,19 @@ class API:
             """
 
             # Check for collection name and check it is the correct type
-            collection_name = self._get_field(data, "collectionName", 3, 2, "Missing Request Field: No collection name")
+            collection_name = self._check_field(
+                data,
+                "collectionName",
+                3,
+                2,
+                "Missing Request Field: No collection name",
+            )
 
             # Check collection name is valid format
             if not self._is_collection_name_valid(collection_name):
-                raise APIError("Collection name must follow the format: /^[A-Z][_0-9A-Za-z]*$/", 2)
+                raise APIError(
+                    "Collection name must follow the format: /^[A-Z][_0-9A-Za-z]*$/", 2
+                )
 
             if self.database_client.does_collection_exist(collection_name):
                 raise APIError("Cannot create collection that already exists", 4)
@@ -145,7 +167,13 @@ class API:
             """
 
             # Check for collection name and check it is the correct type
-            collection_name = self._get_field(data, "collectionName", 3, 2, "Missing Request Field: No collection name")
+            collection_name = self._check_field(
+                data,
+                "collectionName",
+                3,
+                2,
+                "Missing Request Field: No collection name",
+            )
 
             # Additional insert logic goes here
 
@@ -172,4 +200,3 @@ class API:
 
 
 app = API().app
-
