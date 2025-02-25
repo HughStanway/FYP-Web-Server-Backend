@@ -158,12 +158,13 @@ class API:
             )
 
         async def generic_exception_handler(request: Request, exc):
-            error_code = getattr(exc, "error_code", getattr(exc, "error_codee", None))
+            error_code = getattr(exc, "error_code", getattr(exc, "error_code", None))
             return JSONResponse(
                 status_code=500,
                 content={"error": error_code, "message": str(exc.message)},
             )
 
+        # Add generic exception types
         self.app.add_exception_handler(APIError, generic_exception_handler)
         self.app.add_exception_handler(RedisClientError, generic_exception_handler)
         self.app.add_exception_handler(EmbeddingError, generic_exception_handler)
