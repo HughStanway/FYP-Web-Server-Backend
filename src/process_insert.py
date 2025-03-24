@@ -1,7 +1,6 @@
 import hashlib
 import logging
 import queue
-import re
 import shutil
 import subprocess
 import tempfile
@@ -9,7 +8,7 @@ import threading
 from exceptions import ProcessInsertError
 from pathlib import Path
 
-import javalang
+from java_parser import extract_methods_from_java
 
 logging.basicConfig(
     level=logging.INFO, format="%(levelname)s:     [LOGGING]: %(message)s"
@@ -72,7 +71,7 @@ class ProcessInsert:
         temp_dir = Path(tempfile.mkdtemp())
         clone_path = temp_dir / repo_name
 
-        try: 
+        try:
             # Ensure the repo is accessible
             subprocess.run(
                 ["git", "config", "--global", "--add", "safe.directory", repo_path],
@@ -114,24 +113,29 @@ class ProcessInsert:
             with open(file, "r") as f:
                 content = f.read()
 
-                hashed_text = self.compute_hash(content)
-                embedded_text = self.embedding_client.compute_embedding(content)
+                java_methods = extract_methods_from_java(content)
+                for java_method in java_methods:
+                    logging.info(f"Extracted method: {java_method}")
+                    hashed_text = self.compute_hash(java_method)
+                    embedded_text = self.embedding_client.compute_embedding(java_method)
 
-                # Insert into databases
-                if not self.redis_client.exists(hashed_text):
-                    self.redis_client.put(hashed_text, content)
+                    # Insert into databases
+                    if not self.redis_client.exists(hashed_text):
+                        self.redis_client.put(hashed_text, content)
 
-                    # Insert into vector dataabse
-                    self.database_client.insert(
-                        {"hash": hashed_text, "embedding": embedded_text},
-                        collection_name
-                    )
-    
+                        # Insert into vector dataabse
+                        self.database_client.insert(
+                            {"hash": hashed_text, "embedding": embedded_text},
+                            collection_name,
+                        )
+
+                        logging.info("Method inserted successfully.")
+
         logging.info("Successfully inserted into database")
 
     def compute_hash(self, filetext: str):
         return hashlib.sha256(filetext.encode()).hexdigest()
-    
+
     def cleanup_temp_directory(self, temp_dir):
         shutil.rmtree(temp_dir)
         logging.info("Temp directory removed")

@@ -1,7 +1,3 @@
-""" "
-Core exceptions raised by the Code Search client
-"""
-
 import logging
 
 import weaviate

@@ -7,10 +7,10 @@ from exceptions import APIError, DatabaseError, EmbeddingError, RedisClientError
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
+from process_insert import ProcessInsert
 from redis_database import RedisDatabase
 from voyage_embedding import VoyageEmbedding
 from weaviate_database import Weaviate
-from process_insert import ProcessInsert
 
 logging.basicConfig(
     level=logging.INFO, format="%(levelname)s:     [LOGGING]: %(message)s"
@@ -49,7 +49,9 @@ class API:
         self.redis_client = RedisDatabase()
         self.redis_client.init()
 
-        self.process_insert = ProcessInsert(self.embedding_client, self.database_client, self.redis_client)
+        self.process_insert = ProcessInsert(
+            self.embedding_client, self.database_client, self.redis_client
+        )
         self.process_insert.start_worker()
 
     def shutdown(self):
@@ -188,7 +190,7 @@ class API:
 
             data_formatted = {
                 "collectionName": data["collectionName"],
-                "repositories": data["repositories"]
+                "repositories": data["repositories"],
             }
             self.process_insert.add_to_queue(data_formatted)
 
