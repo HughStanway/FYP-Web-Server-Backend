@@ -1,8 +1,8 @@
 from antlr4 import *
 
-from antlr.Java20Lexer import Java20Lexer as JavaLexer
-from antlr.Java20Parser import Java20Parser as JavaParser
-from antlr.Java20ParserListener import Java20ParserListener as JavaParserListener
+from antlr.JavaLexer import JavaLexer
+from antlr.JavaParser import JavaParser
+from antlr.JavaParserListener import JavaParserListener
 
 
 class MethodExtractor(JavaParserListener):
