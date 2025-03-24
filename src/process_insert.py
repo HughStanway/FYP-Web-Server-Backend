@@ -112,7 +112,7 @@ class ProcessInsert:
         for file in files:
             with open(file, "r") as f:
                 content = f.read()
-
+                logging.info(f"Content: {content}")
                 java_methods = extract_methods_from_java(content)
                 for java_method in java_methods:
                     logging.info(f"Extracted method: {java_method}")
