@@ -34,13 +34,3 @@ def extract_methods_from_java(source_code: str) -> list[str]:
     walker.walk(extractor, tree)
 
     return extractor.methods
-
-
-# Example usage
-if __name__ == "__main__":
-    with open("src/TicTacToe.java", 'r') as java_file:
-        java_code = java_file.read()
-
-    methods = extract_methods_from_java(java_code)
-    for method in methods:
-        print(method.encode().decode('unicode_escape'))

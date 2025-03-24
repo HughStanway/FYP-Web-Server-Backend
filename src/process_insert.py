@@ -112,10 +112,12 @@ class ProcessInsert:
         for file in files:
             with open(file, "r") as f:
                 content = f.read()
-                logging.info(f"Content: {content}")
+                logging.info(f"File Content: {content}")
+
                 java_methods = extract_methods_from_java(content)
+                logging.info(f"Extracted {len(java_methods)} methods")
                 for java_method in java_methods:
-                    logging.info(f"Extracted method: {java_method}")
+
                     hashed_text = self.compute_hash(java_method)
                     embedded_text = self.embedding_client.compute_embedding(java_method)
 
@@ -130,8 +132,10 @@ class ProcessInsert:
                         )
 
                         logging.info("Method inserted successfully.")
+                    else:
+                        logging.info("Method already in database")
 
-        logging.info("Successfully inserted into database")
+        logging.info(f"Completed insertions for repo: {repo_path}")
 
     def compute_hash(self, filetext: str):
         return hashlib.sha256(filetext.encode()).hexdigest()
