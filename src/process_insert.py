@@ -123,7 +123,7 @@ class ProcessInsert:
 
                     # Insert into databases
                     if not self.redis_client.exists(hashed_text):
-                        self.redis_client.put(hashed_text, content)
+                        self.redis_client.put(hashed_text, java_method)
 
                         # Insert into vector dataabse
                         self.database_client.insert(
