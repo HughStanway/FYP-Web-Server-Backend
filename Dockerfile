@@ -10,6 +10,9 @@ RUN node -v
 RUN npm -v
 RUN npx --version
 
+RUN npm install -g prettier prettier-plugin-java
+RUN prettier --version
+
 WORKDIR /src
 COPY requirements.txt .
 RUN pip install -r requirements.txt
