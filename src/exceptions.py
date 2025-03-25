@@ -2,7 +2,7 @@ import logging
 
 import weaviate
 
-#### ##########
+###############
 # Error Codes #
 ###############
 
@@ -51,4 +51,8 @@ class EmbeddingError(CodeSearchError):
 
 
 class ProcessInsertError(CodeSearchError):
+    pass
+
+
+class JavaFormatterError(CodeSearchError):
     pass

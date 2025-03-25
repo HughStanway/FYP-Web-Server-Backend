@@ -1,3 +1,9 @@
+import logging
+import os
+import subprocess
+import tempfile
+from exceptions import JavaFormatterError
+
 from antlr4 import *
 
 from antlr.JavaLexer import JavaLexer
@@ -8,7 +14,30 @@ from antlr.JavaParserListener import JavaParserListener
 class MethodExtractor(JavaParserListener):
     def __init__(self):
         self.methods = []
-        self.method_count = 0
+
+    def format_java_method(self, method_code: str) -> str:
+        with tempfile.NamedTemporaryFile(
+            mode="w+", suffix=".java", delete=False
+        ) as tmp:
+            tmp.write(method_code)
+            tmp_path = tmp.name
+
+        result = subprocess.run(
+            ["npx", "prettier", "--plugin=prettier-plugin-java", "--write", tmp_path],
+            capture_output=True,
+            text=True,
+        )
+
+        if result.returncode != 0:
+            os.unlink(tmp_path)
+            raise JavaFormatterError(f"Prettier failed: {result.stderr}")
+
+        with open(tmp_path, "r") as f:
+            formatted_code = f.read().strip()
+
+        logging.info("Method formatted successfully")
+        os.unlink(tmp_path)
+        return formatted_code
 
     def enterMethodDeclaration(self, ctx):
         # Extract method text
@@ -17,9 +46,15 @@ class MethodExtractor(JavaParserListener):
         input_stream = ctx.start.getInputStream()
         method_text = input_stream.getText(start, stop)  # Get method text
 
+        # Ensure text is properly formatted
+        try:
+            formatted_method_text = self.format_java_method(method_text)
+        except JavaFormatterError as e:
+            logging.info(f"Formatter Error: {e}")
+            formatted_method_text = method_text  # Use unformatted version on error
+
         # Add method to list
-        self.methods.append(method_text)
-        self.method_count += 1
+        self.methods.append(formatted_method_text)
 
 
 def extract_methods_from_java(source_code: str) -> list[str]:
