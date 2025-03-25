@@ -14,9 +14,6 @@ WORKDIR /src
 RUN npm init -y && \
     npm install prettier prettier-plugin-java
 
-RUN prettier --version && \
-    npm list prettier prettier-plugin-java
-
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
