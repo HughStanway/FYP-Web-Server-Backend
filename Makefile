@@ -9,15 +9,7 @@ build:
 	docker compose down
 	docker compose up --build -d
 
-# Rebuild after making changes
-rebuild:
-	docker compose down && docker compose up --build -d
-
-# Restart (force recreate)
-restart:
-	docker compose up -d --force-recreate
-
-# Stop and remove containers
+# Stop server and remove containers
 down:
 	docker compose down
 
