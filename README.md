@@ -4,7 +4,7 @@ This is the source code for a proof-of-concept Code Similarity Search based web 
 
 ## 1. Project Deployment
 
-A demo version of this project is deployed on a UCL VM at `hstanway-fyp.cs.ucl.ac.uk`. The server should already be running on this machine thus requests can be made to the API using the servers URL (Please note that as this is a UCL VM it can only be accessed from within the Eduroam network. If you are using the server from outside this network please follow the steps described in section '2. Setup SSH Tunnel to Connect from Outside Eduroam'). 
+A demo version of this project is deployed on a UCL VM at `hstanway-fyp.cs.ucl.ac.uk`. The server should already be running on this machine thus requests can be made to the API using the servers URL (Please note that as this is a UCL VM it can only be accessed from within the Eduroam network. If you are using the server from outside this network please follow the steps described in section '2. Setup SSH Tunnel to Connect from Outside Eduroam').
 
 Additionally, the server can be accessed remotly over SSH. This allows you to start/stop the project and view a live feed of the servers logs. In order to SSH into the VM, please first SSH into `tails.cs.ucl.ac.uk` or `knuckles.cs.ucl.ac.uk` then SSH into `hstanway-fyp.cs.ucl.ac.uk` (Please note you may need have your UCL CS account authorized to access the VM by the department before you can do this). Finally, once you have connected, run `cd /home/hstanway/FYP-Prototype/` to access the correct directory and then use the commands listed in the section '3. Running the Server' to interact with the server.
 
@@ -22,7 +22,7 @@ curl -X POST http://localhost/create -H "Content-Type: application/json" -d '{"c
 
 Used to insert method from a Git repository into a collection.
 
-```
+```[bash]
 curl -X POST http://localhost/insert -H "Content-Type: application/json" -d '{"collectionName": "NewCollection", "repositories":[{"repoName":"simple-java-methods.git", "commitHash":"081ce30276353e017f11a9c556427205bfa38124"}]}'
 ```
 
@@ -30,7 +30,7 @@ curl -X POST http://localhost/insert -H "Content-Type: application/json" -d '{"c
 
 Make code search queries to a collection.
 
-```
+```[bash]
 curl -X POST http://localhost/query -H "Content-Type: application/json" -d '{"collectionName": "Apache", "payload":"Find the Maximum Integer in an array"}'
 ```
 
@@ -57,7 +57,7 @@ Once you have done this, you can open a tunnel on your machines `localhost` that
 ssh -L 8888:localhost:80 fyp
 ```
 
-Now any requests made to `localhost:8888` will be forwarded to `fyp:80` via knuckles. Therefore, instead of makeing API requests to `hstanway-fyp.cs.ucl.ac.uk` you should now make them to `localhost:8888`. 
+Now any requests made to `localhost:8888` will be forwarded to `fyp:80` via knuckles. Therefore, instead of makeing API requests to `hstanway-fyp.cs.ucl.ac.uk` you should now make them to `localhost:8888`.
 
 Finally, once you close the SSH session the tunnel will close and thus the requets will no longer work.
 

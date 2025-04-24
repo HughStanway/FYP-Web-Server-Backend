@@ -1,6 +1,6 @@
 FROM python:3.12
 
-ENV VOYAGE_API_KEY=pa-TxEv8WHHYb0aW_sb1hFoIUp7uLnldoR8esBXqs_lHDT
+ENV VOYAGE_API_KEY=
 
 RUN apt update && apt install -y curl \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
